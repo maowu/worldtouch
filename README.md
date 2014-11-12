@@ -10,3 +10,8 @@ A kinect base fixed surface interactive system dev.
      - opencv_processing
      - udp
      - oscP5
+
+2. For now, the system can capture those feature:
+     - interactive area polygon
+     - interactive area center point
+     - the depth between human and surface
