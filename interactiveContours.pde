@@ -35,6 +35,7 @@ public class InteractiveContour {
   }
   
   public PVector getCenterPoint() {
+    calculatePolyCenter();
     return centerPt;
   }
   
@@ -43,7 +44,7 @@ public class InteractiveContour {
   }
   
   public float area() {
-    return this.ct.area();
+    return ct.area();
   }
   
   public ArrayList<PVector> getPoints() {

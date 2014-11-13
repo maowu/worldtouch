@@ -1,9 +1,10 @@
 void receive( byte[] data, String ip, int port ) {  // <-- extended handler
-  data = subset(data, 0, data.length-2);
-  String message = new String( data );
   
-  println( "receive: \""+message+"\" from "+ip+" on port "+port );
   if(data.length>2) {
+    data = subset(data, 0, data.length-2);
+    String message = new String( data );
+    
+    println( "receive: \""+message+"\" from "+ip+" on port "+port );
     client_center.clear();
     String input = new String(data);
     if(input!="") {
@@ -35,6 +36,7 @@ void sendInteraction(ArrayList<PVector> pt) {
 }
 
 void drawClientInteractive(ArrayList<PVector> pt) {
+  println(pt.size());
   for (int k = 0; k< pt.size (); k++) {
     PVector tmp_p = pt.get(k);
     fill(50, 100, 200, 100);

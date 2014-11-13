@@ -1,4 +1,3 @@
-
 class Settings {
         private String filePath = "";
         private PrintWriter output = null;

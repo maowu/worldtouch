@@ -60,9 +60,13 @@ boolean _DEBUG = false;
 boolean _BG_SAVE = false;
 boolean _NOWBG_SAVE = false;
 boolean _DRAW_DEMO = false;
+boolean _SHOW_SET = true;
 
 ArrayList<Contour> contours = new ArrayList<Contour>();
 ArrayList<InteractiveContour> blobs = new ArrayList<InteractiveContour>();
+
+ArrayList<PVector> client_center = new ArrayList<PVector>();
+ArrayList<PVector> local_center = new ArrayList<PVector>();
 
 // sensor area
 PVector[] area = new PVector[4];
@@ -132,13 +136,21 @@ void setup() {
   wScale = (float)sw/(float)kw;
   hScale = (float)sh/(float)kh;
   
+  // for debug show
   sensor_canvas = createGraphics(kw, kh);
   warp_canvas = createGraphics(kw, kh);
   TIP_MSG = "";
   
+  // Network
+  udp = new UDP( this, recieve_port );
+  udp.listen( true );
+  
+  // for demo 
   pts = new PVector[NUM_PTS];
   for (int i=0; i<NUM_PTS; i++)
     pts[i] = new PVector(width/2, height/2);
+  
+  
 }
 
 
@@ -248,19 +260,23 @@ void draw() {
     contours.clear();
     contours = opencv.findContours(false, true);
     filterContours(contours, kw*kh/128.0);
-    image(depthImg, 0, 0, kw, kh);
+    if(_SHOW_SET) {
+      image(depthImg, 0, 0, kw, kh);
+    }
     
     // draw interactive area
-    for (int i=0; i<area.length; i++) {
-      pushStyle();
-      fill(190, 194, 63);
-      stroke(190, 194, 63);
-      ellipse(area[i].x, area[i].y, 20, 20);
-      line(area[i].x, area[i].y, area[(i+1)%area.length].x, area[(i+1)%area.length].y);
-      fill(196, 98, 67);
-      textAlign(CENTER);
-      text(i, area[i].x, area[i].y+3);
-      popStyle();
+    if(_SHOW_SET) {
+      for (int i=0; i<area.length; i++) {
+        pushStyle();
+        fill(190, 194, 63);
+        stroke(190, 194, 63);
+        ellipse(area[i].x, area[i].y, 20, 20);
+        line(area[i].x, area[i].y, area[(i+1)%area.length].x, area[(i+1)%area.length].y);
+        fill(196, 98, 67);
+        textAlign(CENTER);
+        text(i, area[i].x, area[i].y+3);
+        popStyle();
+      }
     }
 
     if(_DEBUG) {
@@ -269,8 +285,9 @@ void draw() {
     }
     
     drawContours(sensor_canvas, blobs, 0, 0, 1.0, 1.0, color(255, 255, 0), 3, true, BLOBBG_COLOR, false);
-    image(sensor_canvas, 0, 0, kw, kh);
-    
+    if(_SHOW_SET) {
+      image(sensor_canvas, 0, 0, kw, kh);
+    }
     
     // now starting warp sensor image to project view image
     opencv.loadImage(sensor_canvas);
@@ -293,13 +310,19 @@ void draw() {
     if(_DEBUG) {
       showThumbImg(pg.get(), kw/2*3, kh, kw/2, kh/2, true, BORDER_COLOR, "warp contours");
     }else {
-      showThumbImg(pg.get(), kw, 0, kw, kh, true, BORDER_COLOR, "warp contours");
+      if(_SHOW_SET) {
+        showThumbImg(pg.get(), kw, 0, kw, kh, true, BORDER_COLOR, "warp contours");
+      }
     }
     
-    
+    // draw centerpoint from client;
+    CenterPointCollect(blobs);
+    sendInteraction(local_center);
+    drawClientInteractive(client_center);
+  
     if(_DRAW_DEMO) {
-      for (int i=0; i<contours.size(); i++) {
-        Contour c = contours.get(i);
+      for (int i=0; i<blobs.size(); i++) {
+        InteractiveContour c = blobs.get(i);
         ArrayList<PVector> cpts = c.getPoints();
         for (int j=0; j<NUM_PTS; j++) {
           float ang = map(j, 0, NUM_PTS, 0, TWO_PI);
@@ -313,7 +336,7 @@ void draw() {
         }
       }
     }
-   
+ 
     
     // ----- end the kinect sensing and processing ------- //
     check_timer = millis();
@@ -351,10 +374,22 @@ void drawContours(PGraphics p, ArrayList<InteractiveContour> tblob, int xRef, in
       p.fill(40, 250, 210);
       float tmp_r = sqrt(b.area())/2;
       p.ellipse(tmp_center.x, tmp_center.y, tmp_r, tmp_r);
+      
     }
-   
+
   }
   p.endDraw();
+}
+
+void CenterPointCollect(ArrayList<InteractiveContour> tblob) {
+  local_center.clear();
+  for (InteractiveContour b : tblob) {
+    local_center.add( FixScreenPointSet(b.getCenterPoint()) ); 
+  }
+}
+
+PVector FixScreenPointSet(PVector pt) {
+  return new PVector(pt.x*wScale, pt.y*hScale);
 }
 
 
@@ -463,6 +498,9 @@ void keyPressed() {
   if (key == 'd') {
     _DEBUG = !_DEBUG;
   }
+  if (key == 'p') {
+    _SHOW_SET = !_SHOW_SET;
+  }
   
   if (key>='0' && key<='9') {
     area[key-'0'].set(mouseX, mouseY);
@@ -474,7 +512,7 @@ void keyPressed() {
     println("saving settings.txt");
   }
   
-  if (key=='d') {
+  if (key=='w') {
     _DRAW_DEMO = !_DRAW_DEMO; 
   }
 }
